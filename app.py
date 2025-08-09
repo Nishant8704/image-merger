@@ -14,22 +14,24 @@ PAPER_SIZES = {
 }
 
 def parse_aspect_ratio(ratio_str):
+    """Parses aspect ratio string like '16:9' into a float."""
     if ratio_str == "original":
         return None
     w, h = map(int, ratio_str.split(":"))
     return w / h
 
 def resize_image(img, target_aspect, mode, paper_size=None):
+    """Resize image with aspect ratio and paper size options."""
     original_width, original_height = img.size
     original_aspect = original_width / original_height
 
-    # If paper size is provided, use that as the canvas
+    # Determine canvas size based on paper size
     if paper_size and paper_size != "fit":
         target_width, target_height = PAPER_SIZES.get(paper_size, img.size)
     else:
         target_width, target_height = original_width, original_height
 
-    # Maintain aspect ratio
+    # Adjust aspect ratio if needed
     if target_aspect:
         new_height = int(original_width / target_aspect)
         if new_height <= original_height:
@@ -38,6 +40,7 @@ def resize_image(img, target_aspect, mode, paper_size=None):
             new_width = int(original_height * target_aspect)
             img = img.crop(((original_width - new_width) // 2, 0, (original_width + new_width) // 2, original_height))
 
+    # Resize and pad/crop based on mode
     if paper_size and paper_size != "fit":
         img = img.resize((target_width, target_height), Image.LANCZOS)
         canvas = Image.new("RGB", (target_width, target_height), "white")
@@ -65,14 +68,13 @@ def index():
         compress_ratio = int(request.form.get("compress_ratio", "100"))
         pdf_password = request.form.get("pdf_password", "").strip()
 
-        # Map by original filenames (no secure_filename here to avoid mismatch)
+        # Keep original filenames for correct ordering
         file_dict = {file.filename: file for file in files}
 
-        # Arrange according to user-selected order
         if order and order != ['']:
             ordered_files = [file_dict[name] for name in order if name in file_dict]
         else:
-            ordered_files = files  # fallback to upload order
+            ordered_files = files
 
         pdf_io = BytesIO()
         pdf_writer = PdfWriter()
@@ -84,6 +86,7 @@ def index():
             if compress_ratio < 100:
                 compressed_io = BytesIO()
                 img.save(compressed_io, format="JPEG", quality=compress_ratio)
+                compressed_io.seek(0)
                 img = Image.open(compressed_io)
 
             page_io = BytesIO()
@@ -110,4 +113,4 @@ def index():
 if __name__ == "__main__":
     import webbrowser, threading
     threading.Timer(1.5, lambda: webbrowser.open("http://127.0.0.1:5000/")).start()
-    app.run(debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=False)
