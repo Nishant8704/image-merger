@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image to PDF - Custom Order</title>
+    <style>
+        .file-list { display: flex; flex-direction: column; gap: 5px; }
+        .file-item { padding: 8px; background: #f0f0f0; border: 1px solid #ccc; cursor: grab; }
+        .file-item.dragging { opacity: 0.5; }
+    </style>
+</head>
+<body>
+    <h2>Upload Images & Arrange Order</h2>
+
+    <form method="POST" enctype="multipart/form-data" onsubmit="updateOrder()">
+        <input type="file" name="images" id="images" multiple accept="image/*" onchange="displayFiles()"><br><br>
+
+        <div class="file-list" id="fileList"></div>
+
+        <input type="hidden" name="order" id="order">
+
+        <label>Aspect Ratio:</label>
+        <select name="aspect_ratio">
+            <option value="original">Original</option>
+            <option value="4:3">4:3</option>
+            <option value="16:9">16:9</option>
+        </select><br><br>
+
+        <label>Resize Mode:</label>
+        <select name="resize_mode">
+            <option value="crop">Crop</option>
+            <option value="pad">Pad</option>
+        </select><br><br>
+
+        <label>Paper Size:</label>
+        <select name="paper_size">
+            <option value="fit">Fit</option>
+            <option value="A4">A4</option>
+            <option value="Letter">Letter</option>
+        </select><br><br>
+
+        <label>Compression (%):</label>
+        <input type="number" name="compress_ratio" value="100" min="10" max="100"><br><br>
+
+        <label>PDF Password:</label>
+        <input type="text" name="pdf_password"><br><br>
+
+        <button type="submit">Convert to PDF</button>
+    </form>
+
+    <script>
+        let dragged;
+
+        function displayFiles() {
+            const fileInput = document.getElementById("images");
+            const fileList = document.getElementById("fileList");
+            fileList.innerHTML = "";
+
+            Array.from(fileInput.files).forEach(file => {
+                const div = document.createElement("div");
+                div.classList.add("file-item");
+                div.draggable = true;
+                div.dataset.filename = file.name;
+                div.innerText = file.name;
+
+                div.addEventListener("dragstart", (e) => {
+                    dragged = div;
+                    div.classList.add("dragging");
+                });
+
+                div.addEventListener("dragend", () => {
+                    dragged.classList.remove("dragging");
+                    dragged = null;
+                });
+
+                div.addEventListener("dragover", (e) => {
+                    e.preventDefault();
+                    const target = e.target.closest(".file-item");
+                    if (target && target !== dragged) {
+                        const list = target.parentNode;
+                        const children = Array.from(list.children);
+                        const draggedIndex = children.indexOf(dragged);
+                        const targetIndex = children.indexOf(target);
+                        if (draggedIndex < targetIndex) {
+                            list.insertBefore(dragged, target.nextSibling);
+                        } else {
+                            list.insertBefore(dragged, target);
+                        }
+                    }
+                });
+
+                fileList.appendChild(div);
+            });
+        }
+
+        function updateOrder() {
+            const fileNames = Array.from(document.querySelectorAll(".file-item"))
+                                   .map(el => el.dataset.filename);
+            document.getElementById("order").value = fileNames.join(",");
+        }
+    </script>
+</body>
+</html>
